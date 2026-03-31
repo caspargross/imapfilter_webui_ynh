@@ -1,0 +1,18 @@
+#!/bin/bash
+# YunoHost backup script for imapfilter_webui
+# shellcheck disable=SC2034
+source _common.sh
+source /usr/share/yunohost/helpers
+
+ynh_script_progression --message="Declaring backup files..." --weight=1
+
+# App install directory (contains config.lua + web-ui)
+ynh_backup --src_path="$install_dir"
+
+# Nginx config
+ynh_backup --src_path="/etc/nginx/conf.d/$domain.d/$app.conf"
+
+# Systemd service
+ynh_backup --src_path="/etc/systemd/system/$app.service"
+
+ynh_script_progression --message="Backup complete!" --last

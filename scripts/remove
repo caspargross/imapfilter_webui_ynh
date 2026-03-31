@@ -1,0 +1,27 @@
+#!/bin/bash
+# YunoHost remove script for imapfilter_webui
+# shellcheck disable=SC2034
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#---------------------------------------------------------------------------
+# Stop and remove service
+#---------------------------------------------------------------------------
+ynh_script_progression --message="Stopping and removing service..." --weight=1
+
+ynh_systemd_action --service_name="$app" --action="stop" --timeout=30
+yunohost service remove "$app" 2>/dev/null
+ynh_remove_systemd_config
+
+#---------------------------------------------------------------------------
+# Remove nginx config
+#---------------------------------------------------------------------------
+ynh_script_progression --message="Removing nginx configuration..." --weight=1
+ynh_remove_nginx_config
+
+#---------------------------------------------------------------------------
+# Remove log directory
+#---------------------------------------------------------------------------
+ynh_secure_remove --file="/var/log/$app"
+
+ynh_script_progression --message="Removal complete!" --last

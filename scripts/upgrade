@@ -1,0 +1,51 @@
+#!/bin/bash
+# YunoHost upgrade script for imapfilter_webui
+# shellcheck disable=SC2034
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#---------------------------------------------------------------------------
+# Stop service before upgrade
+#---------------------------------------------------------------------------
+ynh_script_progression --message="Stopping service for upgrade..." --weight=1
+ynh_systemd_action --service_name="$app" --action="stop" --timeout=30
+
+#---------------------------------------------------------------------------
+# Pull latest source
+#---------------------------------------------------------------------------
+ynh_script_progression --message="Updating source..." --weight=3
+
+if [ -d "$install_dir/.git" ]; then
+    ynh_exec_as "$app" git -C "$install_dir" pull --ff-only
+else
+    ynh_secure_remove --file="$install_dir"
+    git clone --depth=1 https://github.com/sebastianludwig/imapfilter-web-ui "$install_dir"
+    chown -R "$app:$app" "$install_dir"
+fi
+
+#---------------------------------------------------------------------------
+# Update gems
+#---------------------------------------------------------------------------
+ynh_script_progression --message="Updating Ruby gems..." --weight=5
+
+pushd "$install_dir"
+    ynh_exec_as "$app" \
+        HOME="$install_dir" \
+        GEM_HOME="$install_dir/vendor/bundle" \
+        /usr/bin/bundler install --without development test --path vendor/bundle
+popd
+
+#---------------------------------------------------------------------------
+# Reconfigure (nginx + systemd unchanged unless templates changed)
+#---------------------------------------------------------------------------
+ynh_script_progression --message="Reconfiguring..." --weight=1
+ynh_add_nginx_config
+ynh_add_systemd_config
+
+#---------------------------------------------------------------------------
+# Restart
+#---------------------------------------------------------------------------
+ynh_script_progression --message="Restarting service..." --weight=2
+ynh_systemd_action --service_name="$app" --action="restart" --log_path="systemd" --timeout=30
+
+ynh_script_progression --message="Upgrade complete!" --last

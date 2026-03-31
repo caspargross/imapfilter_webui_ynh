@@ -1,0 +1,22 @@
+[Unit]
+Description=imapfilter Web UI
+After=network.target
+
+[Service]
+Type=simple
+User=__APP__
+Group=__APP__
+WorkingDirectory=__INSTALL_DIR__
+ExecStart=/usr/bin/bundle exec ruby __INSTALL_DIR__/imapfilter_web_ui.rb
+Environment=APP_ENV=production
+Environment=BUNDLE_GEMFILE=__INSTALL_DIR__/Gemfile
+Environment=BUNDLE_PATH=__INSTALL_DIR__/vendor/bundle
+
+StandardOutput=journal
+StandardError=journal
+
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target

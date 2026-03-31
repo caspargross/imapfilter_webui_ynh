@@ -1,0 +1,88 @@
+#!/bin/bash
+# YunoHost install script for imapfilter_webui
+# shellcheck disable=SC2034
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#---------------------------------------------------------------------------
+# Clone the source repository
+#---------------------------------------------------------------------------
+ynh_script_progression --message="Cloning imapfilter-web-ui source..." --weight=3
+
+git clone --depth=1 https://github.com/sebastianludwig/imapfilter-web-ui "$install_dir" \
+    || ynh_die --message="Failed to clone imapfilter-web-ui repository"
+
+#---------------------------------------------------------------------------
+# Set permissions on install dir
+#---------------------------------------------------------------------------
+chown -R "$app:$app" "$install_dir"
+
+#---------------------------------------------------------------------------
+# Install Ruby gems via bundler
+#---------------------------------------------------------------------------
+ynh_script_progression --message="Installing Ruby gems..." --weight=5
+
+pushd "$install_dir"
+    ynh_exec_as "$app" \
+        HOME="$install_dir" \
+        GEM_HOME="$install_dir/vendor/bundle" \
+        /usr/bin/bundler install --without development test --path vendor/bundle \
+        || ynh_die --message="bundle install failed"
+popd
+
+#---------------------------------------------------------------------------
+# Place config.yaml
+#---------------------------------------------------------------------------
+ynh_script_progression --message="Configuring application..." --weight=1
+
+ynh_add_config --template="config.yaml" --destination="$install_dir/config.yaml"
+chown "$app:$app" "$install_dir/config.yaml"
+
+# Create a default (empty) imapfilter config so the web UI has something to show
+if [ ! -f "$install_dir/imapfilter-config.lua" ]; then
+    cat > "$install_dir/imapfilter-config.lua" <<'EOF'
+-- imapfilter configuration
+-- Edit via the Web UI at your YunoHost domain/imapfilter
+
+options = { timeout = 120, subscribe = true, create = true }
+
+-- accounts = {}
+-- accounts["example"] = IMAP {
+--     server   = "imap.example.com",
+--     username = "user@example.com",
+--     password = get_password("Password for user@example.com: "),
+--     ssl      = "ssl23",
+-- }
+EOF
+    chown "$app:$app" "$install_dir/imapfilter-config.lua"
+fi
+
+#---------------------------------------------------------------------------
+# Set up systemd service
+#---------------------------------------------------------------------------
+ynh_script_progression --message="Configuring systemd service..." --weight=1
+
+ynh_add_systemd_config
+yunohost service add "$app" --description="imapfilter Web UI" --log="/var/log/$app/$app.log"
+
+#---------------------------------------------------------------------------
+# Set up log directory
+#---------------------------------------------------------------------------
+mkdir -p "/var/log/$app"
+chown -R "$app:$app" "/var/log/$app"
+
+#---------------------------------------------------------------------------
+# Set up nginx reverse proxy
+#---------------------------------------------------------------------------
+ynh_script_progression --message="Configuring nginx..." --weight=1
+
+ynh_add_nginx_config
+
+#---------------------------------------------------------------------------
+# Start the service
+#---------------------------------------------------------------------------
+ynh_script_progression --message="Starting imapfilter Web UI service..." --weight=2
+
+ynh_systemd_action --service_name="$app" --action="start" --log_path="systemd" --timeout=30
+
+ynh_script_progression --message="Installation complete!" --last

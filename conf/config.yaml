@@ -1,0 +1,9 @@
+imapfilter:
+  config: imapfilter-config.lua
+  verbose: false
+  auto-restart: true
+
+web-ui:
+  interface: "127.0.0.1"
+  port: __PORT__
+  log: __INSTALL_DIR__/imapfilter.log
