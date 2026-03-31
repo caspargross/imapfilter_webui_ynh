@@ -12,6 +12,11 @@ ynh_script_progression --message="Cloning imapfilter-web-ui source..." --weight=
 git clone --depth=1 https://github.com/sebastianludwig/imapfilter-web-ui "$install_dir" \
     || ynh_die --message="Failed to clone imapfilter-web-ui repository"
 
+# Patch EventSource URL from absolute "/log" to relative "log" so it works
+# correctly when the app is served under a sub-path via nginx reverse proxy.
+sed -i 's|new EventSource("/log")|new EventSource("log")|g' \
+    "$install_dir/public/js/imapfilter.js"
+
 #---------------------------------------------------------------------------
 # Set permissions on install dir
 #---------------------------------------------------------------------------

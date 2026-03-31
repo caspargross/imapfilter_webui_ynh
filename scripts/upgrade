@@ -17,6 +17,8 @@ ynh_script_progression --message="Updating source..." --weight=3
 
 if [ -d "$install_dir/.git" ]; then
     ynh_exec_as "$app" git -C "$install_dir" pull --ff-only
+    sed -i 's|new EventSource("/log")|new EventSource("log")|g' \
+        "$install_dir/public/js/imapfilter.js"
 else
     ynh_secure_remove --file="$install_dir"
     git clone --depth=1 https://github.com/sebastianludwig/imapfilter-web-ui "$install_dir"
